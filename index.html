@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1f3864">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png">
+<title>Ertiga Manager</title>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--ink:#1b2430;--mut:#667;--pri:#1f3864;--ok:#1a7f37;--bad:#c0262d;--warn:#b26a00;--line:#dde3ec}
+@media(prefers-color-scheme:dark){:root{--bg:#10151d;--card:#19212c;--ink:#e8edf4;--mut:#9aa6b6;--pri:#6e9bf0;--line:#2b3644}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#1f3864;color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0;flex:1}.pill{padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;background:#fff;color:#000}
+.Synced{color:var(--ok)}.Pending{color:var(--warn)}.Offline{color:#555}.Error,.Conflict{color:var(--bad)}
+nav{display:flex;gap:4px;overflow-x:auto;padding:8px;background:var(--card);border-bottom:1px solid var(--line)}
+nav a{white-space:nowrap;padding:6px 10px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:14px}nav a.on{background:var(--pri);color:#fff}
+main{max-width:1100px;margin:0 auto;padding:14px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}.card small{color:var(--mut);display:block}.card b{font-size:19px}
+.neg{color:var(--bad)}.pos{color:var(--ok)}form.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+label{font-size:12px;color:var(--mut);display:block}input,select,textarea,button{font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;width:100%;background:var(--card);color:var(--ink)}
+button{width:auto;cursor:pointer;background:var(--pri);color:#fff;border:0}button.sec{background:var(--card);color:var(--ink);border:1px solid var(--line)}button.del{background:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{background:var(--pri);color:#fff}.sc{overflow-x:auto}
+.bar{height:14px;background:var(--pri);border-radius:3px;min-width:2px}.bar.n{background:var(--bad)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.row>*{flex:0 1 auto}.flag{color:var(--warn);font-size:12px}
+@media print{header,nav,.noprint{display:none}body{background:#fff;color:#000}}
+</style></head><body>
+<header><h1>🚗 Ertiga Manager</h1><span id="who" style="font-size:12px"></span><span id="st" class="pill">…</span><button class="sec" id="syncBtn" style="padding:4px 10px">Sync Now</button></header>
+<nav id="nav"></nav><main id="app">Loading…</main>
+<script src="lib/jszip.min.js"></script><script src="core.js"></script><script src="app.js"></script>
+</body></html>
