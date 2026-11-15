@@ -26,13 +26,15 @@ async function auth(interactive) {
   if (tok && Date.now() < tokExp - 60000 && !interactive) return tok;
   if (!cid()) throw new Error('Enter your OAuth Client ID in Settings first');
   await loadGis();
-  return new Promise((res, rej) => google.accounts.oauth2.initTokenClient({ client_id: cid(), scope: SCOPE, callback: async r => {
-    if (r.error) return rej(new Error('Sign-in needed: ' + r.error));
-    tok = r.access_token; tokExp = Date.now() + r.expires_in * 1000;
-    user = await (await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + tok } })).json();
-    if (interactive) localStorage.setItem(LOGIN_KEY, String(Date.now()));
-    res(tok);
-  }, error_callback: e => rej(new Error('Sign-in failed: ' + (e.type || 'popup blocked'))) }).requestAccessToken({ prompt: interactive ? 'select_account' : '' }));
+  return new Promise((res, rej) => google.accounts.oauth2.initTokenClient({
+    client_id: cid(), scope: SCOPE, callback: async r => {
+      if (r.error) return rej(new Error('Sign-in needed: ' + r.error));
+      tok = r.access_token; tokExp = Date.now() + r.expires_in * 1000;
+      user = await (await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + tok } })).json();
+      if (interactive) localStorage.setItem(LOGIN_KEY, String(Date.now()));
+      res(tok);
+    }, error_callback: e => rej(new Error('Sign-in failed: ' + (e.type || 'popup blocked')))
+  }).requestAccessToken({ prompt: interactive ? 'select_account' : '' }));
 }
 async function gd(path, opt = {}, raw) {
   const r = await fetch('https://www.googleapis.com/' + path, { ...opt, headers: { Authorization: 'Bearer ' + tok, ...(opt.headers || {}) } });
@@ -85,9 +87,22 @@ async function sync(interactive) {
   if (interactive && !syncErr && user) toast('Signed in successfully');
   if (location.hash.match(/settings|dash/)) route();
 }
-function queueSync() { clearTimeout(timer); if (tok && navigator.onLine) timer = setTimeout(() => sync(false), 3000); }
-addEventListener('online', () => { paintStatus(); sync(false); }); addEventListener('offline', paintStatus);
-setInterval(() => tok && navigator.onLine && sync(false), 60000);
+function queueSync() {
+  clearTimeout(timer);
+  if (!navigator.onLine) return;
+  if (!tok && !loginValid()) return;
+  timer = setTimeout(async () => {
+    try {
+      await auth(false);
+      await sync(false);
+    } catch (e) {
+      syncErr = e.message;
+      paintStatus();
+    }
+  }, 2000);
+}
+addEventListener('online', () => { paintStatus(); if (tok || loginValid()) sync(false); }); addEventListener('offline', paintStatus);
+setInterval(() => { if (navigator.onLine && (tok || loginValid())) sync(false); }, 30000);
 
 // admin: Drive's own sharing is the real enforcement; the allowlist in the file is a second gate
 async function adminShare(email, add) {
@@ -108,60 +123,130 @@ async function restore(id) {
 }
 
 // ---------- UI ----------
-const NAV = [['dash', '▦ &nbsp; Dashboard'], ['booking', '+ &nbsp; Add Booking'], ['upcoming', '◷ &nbsp; Upcoming'], ['ongoing', '↗ &nbsp; Ongoing Trips'], ['bookings', '▤ &nbsp; All Bookings'], ['expense', '+ &nbsp; Add Expense'], ['expenses', '▧ &nbsp; All Expenses'], ['reports', '▥ &nbsp; Monthly Reports'], ['excel', '⇩ &nbsp; Download Excel']];
+const NAV = [['dash', 'Dashboard', '▦'], ['booking', 'Add Booking', '+'], ['upcoming', 'Upcoming', '◷'], ['ongoing', 'Ongoing', '↗'], ['bookings', 'All Bookings', '▤'], ['customer', 'Customer Search', '⌕'], ['expense', 'Add Expense', '+'], ['expenses', 'Expenses', '▧'], ['reports', 'Reports', '▥'], ['excel', 'Export', '⇩']];
 const fld = (n, l, t, v, o = {}) => `<div><label>${l}</label>` + (t === 'select' ? `<select name="${n}">${o.opts.map(x => `<option ${x === v ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : t === 'area' ? `<textarea name="${n}" rows="2">${esc(v)}</textarea>` : `<input name="${n}" type="${t}" value="${esc(v)}" ${o.req ? 'required' : ''} ${t === 'number' ? 'step="any" min="0"' : ''} ${o.list ? `list="${o.list}"` : ''}>`) + '</div>';
 const val = (f, k, num) => { const v = f.get(k); return num ? (v === '' ? 0 : +v) : v.trim(); };
 const mfilter = (months, cur) => `<select id="mf" style="width:auto"><option value="">All months</option>${months.filter(m => m !== 'Undated').map(m => `<option ${m === cur ? 'selected' : ''}>${m}</option>`).join('')}</select>`;
 const calcNow = () => Core.calc(S);
+const rideCards = (records, mode = 'summary') => {
+  if (!records.length) return '<div class="empty-state">No ' + (mode === 'ongoing' ? 'ongoing trips' : 'upcoming trips') + '.</div>';
+  return records.slice(0, 6).map(x => `<div class="mini-trip-card"><div class="mini-top"><strong>${esc(x.destination || 'Trip')}</strong><span class="status-badge ${mode === 'ongoing' ? 'ongoing' : 'upcoming'}">${mode === 'ongoing' ? 'Ongoing' : 'Upcoming'}</span></div><div class="mini-meta">${esc(x.customer || '')}${x.phone ? ` · ${esc(x.phone)}` : ''}</div><div class="mini-meta">${esc(x.date || '')} · ${esc(x.driver || 'Driver not assigned')}</div><div class="mini-actions">${mode === 'ongoing' ? `<button class="small success" data-complete="${x.id}">Complete</button>` : `<button class="small dark" data-start="${x.id}">Start Trip</button>`}<button class="small secondary" data-detail="${x.id}">Details</button></div></div>`).join('');
+};
+const customerRelated = (booking) => {
+  if (!booking) return [];
+  const name = (booking.customer || '').trim().toLowerCase();
+  const phone = (booking.phone || '').trim();
+  return S.bookings.filter(x => !x.deleted && x.id !== booking.id && (
+    (name && (x.customer || '').trim().toLowerCase() === name) ||
+    (phone && (x.phone || '').trim() === phone)
+  )).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+};
+const customerMatches = (record, term) => {
+  const value = String(term || '').trim().toLowerCase();
+  if (!value) return true;
+  const haystack = [record.customer, record.phone, record.destination, record.driver, record.notes, record.tripType].join(' ').toLowerCase();
+  return haystack.includes(value);
+};
+const detailRoute = id => `#/detail/${encodeURIComponent(id)}`;
+const customerRoute = term => `#/customer/${encodeURIComponent(String(term || '').trim())}`;
+const toDisplayDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No date';
+const renderBookingSummary = (b) => `
+  <div class="detail-grid">
+    <div class="detail-box"><small>Trip date</small><strong>${esc(toDisplayDate(b.date))}</strong></div>
+    <div class="detail-box"><small>Trip type</small><strong>${esc(b.tripType || 'Not set')}</strong></div>
+    <div class="detail-box"><small>Status</small><strong>${esc(b.tripStatus || 'Completed')}</strong></div>
+    <div class="detail-box"><small>Driver</small><strong>${esc(b.driver || 'Unassigned')}</strong></div>
+    <div class="detail-box"><small>Destination</small><strong>${esc(b.destination || 'Not set')}</strong></div>
+    <div class="detail-box"><small>Booking amount</small><strong>${INR(b.amount)}</strong></div>
+    <div class="detail-box"><small>Received</small><strong>${INR(b.received)}</strong></div>
+    <div class="detail-box"><small>Pending</small><strong class="${cls(Core.num(b.amount) - Core.num(b.received))}">${INR(Core.num(b.amount) - Core.num(b.received))}</strong></div>
+    <div class="detail-box"><small>KM from</small><strong>${b.kmFrom !== '' && b.kmFrom != null ? esc(String(b.kmFrom)) : '—'}</strong></div>
+    <div class="detail-box"><small>KM to</small><strong>${b.kmTo !== '' && b.kmTo != null ? esc(String(b.kmTo)) : '—'}</strong></div>
+    <div class="detail-box"><small>Total KM</small><strong>${b.kmFrom && b.kmTo ? esc(String(Math.max(0, Number(b.kmTo) - Number(b.kmFrom)))) : '—'}</strong></div>
+    <div class="detail-box"><small>Trip expenses</small><strong>${INR(Core.tripOf(b))}</strong></div>
+    <div class="detail-box full"><small>Notes</small><strong>${esc(b.notes || 'No notes')}</strong></div>
+  </div>`;
 
 const V = {
   dash() {
     const C = calcNow(), sel = $('#mf')?.value || '', m = sel ? C.months.find(x => x.month === sel) : null, t = m || C.totals, cur = new Date().toISOString().slice(0, 7), cm = C.months.find(x => x.month === cur) || { revenue: 0, expenses: 0, profit: 0, net: 0, count: 0 };
-    const mx = Math.max(1, ...C.months.map(x => Math.abs(x.net))), card = (l, v, c) => `<div class="card"><small>${l}</small><b class="${c || ''}">${v}</b></div>`;
-    return `<div class="row">${mfilter(C.months.map(x => x.month), sel)}<span>${sel ? 'Showing ' + sel : 'Showing all time'}</span></div><div class="grid">${card('Total bookings', t.count)}${card('Booking revenue', INR(t.revenue))}${card('Received', INR(t.received))}${card('Pending payments', INR(t.pending), t.pending ? 'neg' : '')}${card('Trip expenses', INR(t.trip))}${card('Other expenses', INR(t.other))}${card('Total expenses', INR(t.expenses))}${card('Profit before EMI', INR(t.profit), cls(t.profit))}${card('EMI', INR(t.emi) + (sel ? '' : ' paid'))}${card('Net after EMI', INR(t.net), cls(t.net))}</div>
-    <div class="card"><b>Current month (${cur})</b><p>Bookings ${cm.count} · Revenue ${INR(cm.revenue)} · Expenses ${INR(cm.expenses)} · Net after EMI <span class="${cls(cm.net)}">${INR(cm.net)}</span></p></div>
-    <div class="card"><b>Monthly net profit after EMI</b>${C.months.map(x => `<div class="row"><span style="width:70px">${x.month}</span><div class="bar ${x.net < 0 ? 'n' : ''}" style="width:${Math.abs(x.net) / mx * 60}%"></div><span class="${cls(x.net)}">${INR(x.net)}</span></div>`).join('')}</div>
-    <div class="card"><div class="row" style="justify-content:space-between"><b>Ongoing trips (${S.bookings.filter(x => !x.deleted && x.tripStatus === 'Ongoing').length})</b><a href="#/ongoing">View all</a></div>${S.bookings.filter(x => !x.deleted && x.tripStatus === 'Ongoing').map(x => `<div class="row"><span>${esc(x.destination || 'Trip')} · ${esc(x.customer || '')}</span><a href="#/manage/${x.id}">Manage</a></div>`).join('') || '<p>No ongoing trips</p>'}</div>
-    <div class="card"><div class="row" style="justify-content:space-between"><b>Upcoming trips (${S.bookings.filter(x => !x.deleted && (x.tripStatus || 'Completed') === 'Upcoming').length})</b><a href="#/upcoming">View all</a></div>${S.bookings.filter(x => !x.deleted && x.tripStatus === 'Upcoming').slice(0,5).map(x => `<div class="row"><span>${esc(x.date || '')} · ${esc(x.destination || 'Trip')}</span><button class="small" data-start="${x.id}">Start Trip</button></div>`).join('') || '<p>No upcoming trips</p>'}</div>
-    ${C.months.some(x => x.month === 'Undated') ? '<p class="flag">⚠ Some records have no date – shown under "Undated" and included in totals. Edit them to assign a month.</p>' : ''}`;
+    const mx = Math.max(1, ...C.months.map(x => Math.abs(x.net))), card = (l, v, c) => `<div class="stat-card"><small>${l}</small><b class="${c || ''}">${v}</b></div>`;
+    const ongoing = S.bookings.filter(x => !x.deleted && x.tripStatus === 'Ongoing').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    const upcoming = S.bookings.filter(x => !x.deleted && (x.tripStatus || 'Completed') === 'Upcoming').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    return `<div class="row"><span class="soft-tag">${sel ? 'Showing ' + sel : 'Showing all time'}</span>${mfilter(C.months.map(x => x.month), sel)}</div>
+      <div class="dashboard-grid top-grid">
+        <div class="card stack-card">
+          <div class="section-head"><div><small>Ongoing trips</small><h3>${ongoing.length}</h3></div></div>
+          ${rideCards(ongoing, 'ongoing')}
+        </div>
+        <div class="card stack-card">
+          <div class="section-head"><div><small>Upcoming trips</small><h3>${upcoming.length}</h3></div></div>
+          ${rideCards(upcoming, 'upcoming')}
+        </div>
+      </div>
+      <div class="stat-grid">${card('Total bookings', t.count)}${card('Booking revenue', INR(t.revenue))}${card('Received', INR(t.received))}${card('Pending payments', INR(t.pending), t.pending ? 'neg' : '')}${card('Trip expenses', INR(t.trip))}${card('Other expenses', INR(t.other))}${card('Total expenses', INR(t.expenses))}${card('Profit before EMI', INR(t.profit), cls(t.profit))}${card('EMI', INR(t.emi) + (sel ? '' : ' paid'))}${card('Net after EMI', INR(t.net), cls(t.net))}</div>
+      <div class="card"><div class="section-head"><div><small>Current month</small><h3>${cur}</h3></div></div><p class="muted">Bookings ${cm.count} · Revenue ${INR(cm.revenue)} · Expenses ${INR(cm.expenses)} · Net after EMI <span class="${cls(cm.net)}">${INR(cm.net)}</span></p></div>
+      <div class="card"><div class="section-head"><div><small>Monthly net profit after EMI</small><h3>Trend</h3></div></div>${C.months.map(x => `<div class="trend-row"><span class="month-label">${x.month}</span><div class="trend-bar ${x.net < 0 ? 'neg' : 'pos'}" style="width:${Math.abs(x.net) / mx * 100}%"></div><span class="${cls(x.net)}">${INR(x.net)}</span></div>`).join('')}</div>
+      ${C.months.some(x => x.month === 'Undated') ? '<p class="flag">⚠ Some records have no date – shown under "Undated" and included in totals. Edit them to assign a month.</p>' : ''}`;
   },
   booking(id) {
     const b = S.bookings.find(x => x.id === id) || { date: new Date().toISOString().slice(0, 10), tripType: 'Single Day Trip', tripStatus: 'Upcoming' }, n = (k) => b[k] ?? '';
-    return `<div class="card"><form class="f" id="bf">${fld('date', 'Booking / travel date', 'date', b.date, { req: 1 })}${fld('destination', 'Trip location', 'text', n('destination'))}${fld('customer', 'Customer name', 'text', n('customer'))}${fld('phone', 'Contact', 'tel', n('phone'))}${fld('tripType', 'Trip type', 'select', b.tripType, { opts: ['Single Day Trip', 'Multi Day Trip', 'Airport / Station', 'Local', 'Outstation', 'Other'] })}${fld('tripStatus', 'Trip status', 'select', b.tripStatus || 'Completed', { opts: ['Upcoming', 'Ongoing', 'Completed'] })}${fld('driver', 'Driver', 'text', n('driver'))}${fld('kmFrom', 'KM from (odometer)', 'number', n('kmFrom'))}${fld('kmTo', 'KM to', 'number', n('kmTo'))}${fld('amount', 'Booking amount ₹', 'number', n('amount'))}${fld('received', 'Amount received ₹', 'number', n('received'))}${fld('driverFee', 'Driver fee ₹', 'number', n('driverFee'))}${fld('petrol', 'Petrol ₹', 'number', n('petrol'))}${fld('gas', 'Gas ₹', 'number', n('gas'))}${fld('toll', 'Toll ₹', 'number', n('toll'))}${fld('notes', 'Notes', 'area', n('notes'))}<div style="align-self:end"><button>Save booking</button> <button type="button" class="sec" onclick="location.hash='#/bookings'">Cancel</button></div></form><p class="flag">Pending and payment status are calculated from amount and received.</p></div>`;
+    return `<div class="card"><form class="f" id="bf">${fld('date', 'Booking / travel date', 'date', b.date, { req: 1 })}${fld('destination', 'Trip location', 'text', n('destination'))}${fld('customer', 'Customer name', 'text', n('customer'))}${fld('phone', 'Contact', 'tel', n('phone'))}${fld('tripType', 'Trip type', 'select', b.tripType, { opts: ['Single Day Trip', 'Multi Day Trip', 'Airport / Station', 'Local', 'Outstation', 'Other'] })}${fld('tripStatus', 'Trip status', 'select', b.tripStatus || 'Completed', { opts: ['Upcoming', 'Ongoing', 'Completed'] })}${fld('driver', 'Driver', 'text', n('driver'))}${fld('kmFrom', 'KM from (odometer)', 'number', n('kmFrom'))}${fld('kmTo', 'KM to', 'number', n('kmTo'))}${fld('amount', 'Booking amount ₹', 'number', n('amount'))}${fld('received', 'Amount received ₹', 'number', n('received'))}${fld('driverFee', 'Driver fee ₹', 'number', n('driverFee'))}${fld('petrol', 'Petrol ₹', 'number', n('petrol'))}${fld('gas', 'Gas ₹', 'number', n('gas'))}${fld('toll', 'Toll ₹', 'number', n('toll'))}${fld('notes', 'Notes', 'area', n('notes'))}<div style="align-self:end;display:flex;gap:10px;flex-wrap:wrap"><button>Save booking</button> <button type="button" class="sec" onclick="location.hash='#/bookings'">Cancel</button></div></form><p class="flag">Pending and payment status are calculated from amount and received.</p></div>`;
   },
   bookingRows(records, emptyText = 'No bookings') {
-    return `<div class="sc"><table><tr><th>Date</th><th>Location</th><th>Customer / Driver</th><th>Amount</th><th>Received</th><th>Pending</th><th>Trip expenses</th><th>Profit</th><th>Trip status</th><th>Payment</th><th>Actions</th></tr>${records.map(x => { const t = Core.tripOf(x), p = Core.num(x.amount) - Core.num(x.received), ts = x.tripStatus || 'Completed'; return `<tr><td>${x.date || '<span class=flag>no date</span>'}</td><td>${esc(x.destination)}</td><td>${esc(x.customer || x.driver)}</td><td>${INR(x.amount)}</td><td>${INR(x.received)}</td><td>${INR(p)}</td><td>${INR(t)}</td><td class="${cls(Core.num(x.amount) - t)}">${INR(Core.num(x.amount) - t)}</td><td>${esc(ts)}</td><td>${!Core.num(x.amount) ? 'Unpriced' : p <= 0 ? 'Paid' : x.received > 0 ? 'Partial' : 'Unpaid'}</td><td><a href="#/booking/${x.id}">Edit</a> ${ts === 'Upcoming' ? `<button class="small" data-start="${x.id}">Start Trip</button>` : ts === 'Ongoing' ? `<a href="#/manage/${x.id}">Manage Trip</a>` : ''} <a href="#" data-del="bookings:${x.id}">Delete</a></td></tr>`; }).join('') || `<tr><td colspan="11">${emptyText}</td></tr>`}</table></div>`;
+    return `<div class="sc"><table><tr><th>Date</th><th>Location</th><th>Customer / Phone</th><th>Amount</th><th>Received</th><th>Pending</th><th>Trip expenses</th><th>Profit</th><th>Trip status</th><th>Payment</th><th>Actions</th></tr>${records.map(x => { const t = Core.tripOf(x), p = Core.num(x.amount) - Core.num(x.received), ts = x.tripStatus || 'Completed'; return `<tr><td>${x.date || '<span class=flag>no date</span>'}</td><td>${esc(x.destination)}</td><td><div class="cell-stack"><strong>${esc(x.customer || x.driver || '—')}</strong><small>${esc(x.phone || 'No number')}</small></div></td><td>${INR(x.amount)}</td><td>${INR(x.received)}</td><td>${INR(p)}</td><td>${INR(t)}</td><td class="${cls(Core.num(x.amount) - t)}">${INR(Core.num(x.amount) - t)}</td><td>${esc(ts)}</td><td>${!Core.num(x.amount) ? 'Unpriced' : p <= 0 ? 'Paid' : x.received > 0 ? 'Partial' : 'Unpaid'}</td><td><div class="action-stack">${ts === 'Upcoming' ? `<button class="small dark" data-start="${x.id}">Start Trip</button>` : ts === 'Ongoing' ? `<button class="small success" data-complete="${x.id}">Complete</button>` : ''}<button class="small secondary" data-detail="${x.id}">Details</button><a href="#/booking/${x.id}">Edit</a></div></td></tr>`; }).join('') || `<tr><td colspan="11">${emptyText}</td></tr>`}</table></div>`;
   },
   bookings() {
-    const f = $('#qs')?.value?.toLowerCase() || '', mo = $('#mf')?.value || '', L = S.bookings.filter(x => !x.deleted && (!mo || (x.date || '').startsWith(mo)) && JSON.stringify(x).toLowerCase().includes(f)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    const f = $('#qs')?.value?.toLowerCase() || '', mo = $('#mf')?.value || '', L = S.bookings.filter(x => !x.deleted && (!mo || (x.date || '').startsWith(mo)) && customerMatches(x, f)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     const mons = [...new Set(S.bookings.filter(x => x.date).map(x => x.date.slice(0, 7)))].sort();
-    return `<div class="row"><input id="qs" placeholder="Search…" value="${esc(f)}" style="max-width:240px">${mfilter(mons, mo)}<button onclick="location.hash='#/booking'">+ Add</button><button class="sec" onclick="csvOut('b')">CSV</button></div>${this.bookingRows(L)}`;
+    return `<div class="toolbar"><input id="qs" placeholder="Search customer, phone, destination…" value="${esc(f)}" style="max-width:260px"><div class="toolbar-actions">${mfilter(mons, mo)}<button onclick="location.hash='#/booking'">+ Add</button><button class="sec" onclick="csvOut('b')">CSV</button></div></div>${this.bookingRows(L)}`;
   },
   upcoming() {
-    const L = S.bookings.filter(x => !x.deleted && (x.tripStatus || 'Completed') === 'Upcoming').sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-    return `<div class="card"><b>Upcoming bookings</b><p>Start a trip when the vehicle departs.</p>${this.bookingRows(L, 'No upcoming bookings')}</div>`;
+    const L = S.bookings.filter(x => !x.deleted && (x.tripStatus || 'Completed') === 'Upcoming').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    return `<div class="card"><div class="section-head"><div><small>Upcoming bookings</small><h3>${L.length}</h3></div></div><p class="muted">Start a trip when the vehicle departs.</p>${this.bookingRows(L, 'No upcoming bookings')}</div>`;
   },
   ongoing() {
-    const L = S.bookings.filter(x => !x.deleted && x.tripStatus === 'Ongoing').sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-    return `<div class="card"><b>Ongoing trips</b><p>Manage trip expenses and mark each trip completed when finished.</p>${this.bookingRows(L, 'No ongoing trips')}</div>`;
+    const L = S.bookings.filter(x => !x.deleted && x.tripStatus === 'Ongoing').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    return `<div class="card"><div class="section-head"><div><small>Ongoing trips</small><h3>${L.length}</h3></div></div><p class="muted">Manage trip expenses and mark each trip completed when finished.</p>${this.bookingRows(L, 'No ongoing trips')}</div>`;
   },
   manage(id) {
     const b = S.bookings.find(x => x.id === id && !x.deleted);
     if (!b) return '<div class="card">Booking not found.</div>';
     if (b.tripStatus !== 'Ongoing') return `<div class="card">This trip is not ongoing. <a href="#/booking/${id}">Edit booking</a></div>`;
-    const entries = (b.tripEntries || []).slice().sort((a,z)=>(z.createdAt||0)-(a.createdAt||0));
-    return `<div class="card"><div class="row" style="justify-content:space-between"><div><b>${esc(b.destination || 'Trip')}</b><p>${esc(b.customer || '')} · ${esc(b.date || '')} · ${esc(b.driver || '')}</p></div><a href="#/booking/${id}">Edit booking</a></div><div class="grid"><div><small>Petrol total</small><b>${INR(b.petrol)}</b></div><div><small>Gas total</small><b>${INR(b.gas)}</b></div><div><small>Driver payments</small><b>${INR(b.driverFee)}</b></div><div><small>Total trip expenses</small><b>${INR(Core.tripOf(b))}</b></div></div></div>
-      <div class="card"><b>Add trip expense</b><form class="f" id="tf">${fld('entryType', 'Expense type', 'select', 'Petrol', { opts: ['Petrol', 'Gas', 'Driver payment'] })}${fld('entryAmount', 'Amount ₹', 'number', '', { req: 1 })}${fld('entryNote', 'Note (optional)', 'text', '')}<div style="align-self:end"><button>Add expense</button></div></form></div>
-      <div class="card"><b>Trip expense history</b><div class="sc"><table><tr><th>Date / time</th><th>Type</th><th>Amount</th><th>Note</th></tr>${entries.map(e=>`<tr><td>${new Date(e.createdAt || Date.now()).toLocaleString()}</td><td>${esc(e.type)}</td><td>${INR(e.amount)}</td><td>${esc(e.note || '')}</td></tr>`).join('') || '<tr><td colspan="4">No additional entries yet</td></tr>'}</table></div></div>
-      <div class="row"><button class="sec" onclick="location.hash='#/ongoing'">Back to ongoing trips</button><button class="done" data-complete="${id}">Mark Trip Completed</button></div>`;
+    const entries = (b.tripEntries || []).slice().sort((a, z) => (z.createdAt || 0) - (a.createdAt || 0));
+    return `<div class="card"><div class="section-head"><div><small>Manage ongoing trip</small><h3>${esc(b.destination || 'Trip')}</h3></div><button class="sec" onclick="location.hash='#/ongoing'">Back</button></div>
+      <form class="f" id="of">${fld('date', 'Booking / travel date', 'date', b.date, { req: 1 })}${fld('destination', 'Trip location', 'text', b.destination || '')}${fld('customer', 'Customer name', 'text', b.customer || '')}${fld('phone', 'Contact', 'tel', b.phone || '')}${fld('tripType', 'Trip type', 'select', b.tripType || 'Single Day Trip', { opts: ['Single Day Trip', 'Multi Day Trip', 'Airport / Station', 'Local', 'Outstation', 'Other'] })}${fld('tripStatus', 'Trip status', 'select', b.tripStatus || 'Ongoing', { opts: ['Upcoming', 'Ongoing', 'Completed'] })}${fld('driver', 'Driver', 'text', b.driver || '')}${fld('kmFrom', 'KM from', 'number', b.kmFrom ?? '')}${fld('kmTo', 'KM to', 'number', b.kmTo ?? '')}${fld('amount', 'Booking amount ₹', 'number', b.amount ?? '')}${fld('received', 'Amount received ₹', 'number', b.received ?? '')}${fld('driverFee', 'Driver fee ₹', 'number', b.driverFee ?? '')}${fld('petrol', 'Petrol ₹', 'number', b.petrol ?? '')}${fld('gas', 'Gas ₹', 'number', b.gas ?? '')}${fld('toll', 'Toll ₹', 'number', b.toll ?? '')}${fld('notes', 'Notes', 'area', b.notes || '')}<div style="align-self:end;display:flex;gap:10px;flex-wrap:wrap"><button>Save trip details</button><button type="button" class="done" data-complete="${id}">Mark completed</button></div></form></div>
+      <div class="card"><div class="section-head"><div><small>Add trip expense</small><h3>Quick entry</h3></div></div><form class="f" id="tf">${fld('entryType', 'Expense type', 'select', 'Petrol', { opts: ['Petrol', 'Gas', 'Driver payment'] })}${fld('entryAmount', 'Amount ₹', 'number', '', { req: 1 })}${fld('entryNote', 'Note (optional)', 'text', '')}<div style="align-self:end"><button>Add expense</button></div></form></div>
+      <div class="card"><div class="section-head"><div><small>Trip expense history</small><h3>Entries</h3></div></div><div class="sc"><table><tr><th>Date / time</th><th>Type</th><th>Amount</th><th>Note</th></tr>${entries.map(e => `<tr><td>${new Date(e.createdAt || Date.now()).toLocaleString()}</td><td>${esc(e.type)}</td><td>${INR(e.amount)}</td><td>${esc(e.note || '')}</td></tr>`).join('') || '<tr><td colspan="4">No additional entries yet</td></tr>'}</table></div></div>`;
+  },
+  detail(id) {
+    const b = S.bookings.find(x => x.id === id && !x.deleted);
+    if (!b) return `<div class="card">Booking not found.</div>`;
+    const related = customerRelated(b);
+    return `<div class="card"><div class="section-head"><div><small>Booking details</small><h3>${esc(b.destination || 'Trip')}</h3></div><div class="toolbar-actions"><button class="sec" onclick="location.hash='#/bookings'">Back to bookings</button><button onclick="location.hash='#/booking/${b.id}'">Edit</button></div></div>
+      <div class="customer-detail-header"><div><h4>${esc(b.customer || 'Unnamed customer')}</h4><p>${esc(b.phone || 'No phone')}</p></div><button class="sec" onclick="location.hash='${customerRoute(b.customer || b.phone || b.id)}'">View all rides by this customer</button></div>
+      ${renderBookingSummary(b)}
+      <div class="section-head spaced"><div><small>Other rides by this customer</small><h3>${related.length}</h3></div></div>
+      ${related.length ? `<div class="sc"><table><tr><th>Date</th><th>Location</th><th>Amount</th><th>Status</th><th></th></tr>${related.map(x => `<tr><td>${esc(toDisplayDate(x.date))}</td><td>${esc(x.destination || 'Trip')}</td><td>${INR(x.amount)}</td><td>${esc(x.tripStatus || 'Completed')}</td><td><button class="small secondary" data-detail="${x.id}">Open</button></td></tr>`).join('')}</table></div>` : '<p class="muted">No other rides found for this customer.</p>'}
+    </div>`;
+  },
+  customer(term) {
+    const value = decodeURIComponent(term || '').trim();
+    const matches = S.bookings.filter(x => !x.deleted && customerMatches(x, value)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    const customerName = matches[0]?.customer || value || 'Customer';
+    return `<div class="card"><div class="section-head"><div><small>Customer search</small><h3>${esc(customerName)}</h3></div></div>
+      <div class="toolbar"><input id="custLookup" placeholder="Search customer name or phone" value="${esc(value)}"><button class="sec" onclick="location.hash='#/bookings'">Open full bookings</button></div>
+      <p class="muted">Showing all rides for this customer / number. Search by name, phone or trip destination.</p>
+      ${matches.length ? `<div class="sc"><table><tr><th>Date</th><th>Destination</th><th>Driver</th><th>Amount</th><th>Status</th><th>Actions</th></tr>${matches.map(x => `<tr><td>${esc(toDisplayDate(x.date))}</td><td>${esc(x.destination || 'Trip')}</td><td>${esc(x.driver || '—')}</td><td>${INR(x.amount)}</td><td>${esc(x.tripStatus || 'Completed')}</td><td><button class="small secondary" data-detail="${x.id}">Details</button></td></tr>`).join('')}</table></div>` : '<p class="empty-state">No rides found for this customer or phone number.</p>'}
+    </div>`;
   },
   expense(id) {
     const e = S.expenses.find(x => x.id === id) || { date: new Date().toISOString().slice(0, 10) };
-    return `<div class="card"><form class="f" id="ef">${fld('date', 'Expense date', 'date', e.date || '')}${fld('category', 'Category', 'text', e.category || '', { req: 1, list: 'cats' })}<datalist id="cats">${S.settings.categories.map(c => `<option>${esc(c)}</option>`).join('')}</datalist>${fld('description', 'Description', 'text', e.description || '')}${fld('amount', 'Amount ₹', 'number', e.amount ?? '', { req: 1 })}${fld('method', 'Payment method', 'select', e.method || '', { opts: ['', 'Cash', 'UPI', 'Card', 'FASTag', 'Bank transfer'] })}${fld('notes', 'Notes', 'area', e.notes || '')}<div style="align-self:end"><button>Save expense</button> <button type="button" class="sec" onclick="location.hash='#/expenses'">Cancel</button></div></form><p class="flag">New categories are added automatically. Leave date blank only for old records (flagged Undated).</p></div>`;
+    return `<div class="card"><form class="f" id="ef">${fld('date', 'Expense date', 'date', e.date || '')}${fld('category', 'Category', 'text', e.category || '', { req: 1, list: 'cats' })}<datalist id="cats">${S.settings.categories.map(c => `<option>${esc(c)}</option>`).join('')}</datalist>${fld('description', 'Description', 'text', e.description || '')}${fld('amount', 'Amount ₹', 'number', e.amount ?? '', { req: 1 })}${fld('method', 'Payment method', 'select', e.method || '', { opts: ['', 'Cash', 'UPI', 'Card', 'FASTag', 'Bank transfer'] })}${fld('notes', 'Notes', 'area', e.notes || '')}<div style="align-self:end;display:flex;gap:10px;flex-wrap:wrap"><button>Save expense</button> <button type="button" class="sec" onclick="location.hash='#/expenses'">Cancel</button></div></form><p class="flag">New categories are added automatically. Leave date blank only for old records (flagged Undated).</p></div>`;
   },
   expenses() {
     const f = $('#qs')?.value?.toLowerCase() || '', L = S.expenses.filter(x => !x.deleted && JSON.stringify(x).toLowerCase().includes(f)).sort((a, b) => (b.date || '').localeCompare(a.date || '')), tot = L.reduce((s, x) => s + Core.num(x.amount), 0);
-    return `<div class="row"><input id="qs" placeholder="Search…" value="${esc(f)}" style="max-width:240px"><button onclick="location.hash='#/expense'">+ Add</button><button class="sec" onclick="csvOut('e')">CSV</button><b>Total ${INR(tot)}</b></div><div class="sc"><table><tr><th>Date<th>Category<th>Description<th>Amount<th>Method<th></tr>${L.map(x => `<tr><td>${x.date || `<span class=flag>undated${x.dateRaw ? ' ("' + esc(x.dateRaw) + '")' : ''}</span>`}<td>${esc(x.category)}<td>${esc(x.description)}<td>${INR(x.amount)}<td>${esc(x.method)}<td><a href="#/expense/${x.id}">Edit</a> <a href="#" data-del="expenses:${x.id}">Delete</a></tr>`).join('') || '<tr><td colspan=6>No expenses</tr>'}</table></div>`;
+    return `<div class="toolbar"><input id="qs" placeholder="Search expense…" value="${esc(f)}" style="max-width:240px"><div class="toolbar-actions"><button onclick="location.hash='#/expense'">+ Add</button><button class="sec" onclick="csvOut('e')">CSV</button><b>Total ${INR(tot)}</b></div></div><div class="sc"><table><tr><th>Date<th>Category<th>Description<th>Amount<th>Method<th></tr>${L.map(x => `<tr><td>${x.date || `<span class=flag>undated${x.dateRaw ? ' ("' + esc(x.dateRaw) + '")' : ''}</span>`}<td>${esc(x.category)}<td>${esc(x.description)}<td>${INR(x.amount)}<td>${esc(x.method)}<td><a href="#/expense/${x.id}">Edit</a> <a href="#" data-del="expenses:${x.id}">Delete</a></tr>`).join('') || '<tr><td colspan=6>No expenses</tr>'}</table></div>`;
   },
   reports() {
     const C = calcNow(), T = C.totals;
@@ -184,24 +269,65 @@ async function route() {
   $('#loginScreen').style.display = appUnlocked ? 'none' : 'grid';
   $('#workspace').style.display = appUnlocked ? 'block' : 'none';
   if (!appUnlocked) return;
-  const [, p, id] = (location.hash || '#/dash').split('/'), v = V[p] ? p : 'dash';
-  $('#nav').innerHTML = NAV.map(([k, l]) => `<a href="#/${k}" class="${(k === v) || (k === 'bookings' && v === 'booking' && id) ? 'on' : ''}">${l}</a>`).join('');
-  $('#pageTitle').textContent = ({dash:'Dashboard',booking:id?'Edit booking':'Add booking',upcoming:'Upcoming trips',ongoing:'Ongoing trips',bookings:'All bookings',expense:id?'Edit expense':'Add expense',expenses:'All expenses',reports:'Monthly reports',excel:'Export centre',settings:'Settings & backup',manage:'Manage trip'})[v] || 'Dashboard';
-  $('#app').innerHTML = V[v](id); wire(v, id); paintStatus();
+  const hashPath = (location.hash || '#/dash').replace(/^#/, '').replace(/^\/+/, '');
+  const parts = hashPath.split('/');
+  const p = parts.shift() || 'dash';
+  const id = parts.join('/');
+  const v = V[p] ? p : 'dash';
+  const routeTitleMap = { dash: 'Dashboard', booking: id ? 'Edit booking' : 'Add booking', detail: 'Booking details', customer: 'Customer search', upcoming: 'Upcoming trips', ongoing: 'Ongoing trips', bookings: 'All bookings', expense: id ? 'Edit expense' : 'Add expense', expenses: 'All expenses', reports: 'Monthly reports', excel: 'Export centre', settings: 'Settings & backup', manage: 'Manage trip' };
+  $('#nav').innerHTML = NAV.map(([k, label, icon]) => `<a href="#/${k}" class="${k === v ? 'on' : ''}"><span class="nav-icon">${icon}</span><span class="nav-text">${label}</span></a>`).join('');
+  $('#pageTitle').textContent = routeTitleMap[v] || 'Dashboard';
+  $('#app').innerHTML = V[v](id || undefined); wire(v, id || undefined); paintStatus();
 }
 const dl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); };
 window.csvOut = k => { const L = (k === 'b' ? S.bookings : S.expenses).filter(x => !x.deleted); const h = Object.keys(L[0] || {}).filter(x => !['rev', 'baseRev', 'tripEntries'].includes(x)); dl(new Blob([Core.csv([h, ...L.map(r => h.map(c => r[c]))])], { type: 'text/csv' }), (k === 'b' ? 'bookings' : 'expenses') + '.csv'); };
+const restoreSearchFocus = (id, cursor = null) => {
+  requestAnimationFrame(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.focus();
+    try {
+      const pos = cursor == null ? el.value.length : Math.min(cursor, el.value.length);
+      el.setSelectionRange(pos, pos);
+    } catch (_) { }
+  });
+};
 function wire(v, id) {
-  $('#mf')?.addEventListener('change', route); $('#qs')?.addEventListener('input', e => { const p = e.target.selectionStart; route().then(() => { const i = $('#qs'); i.focus(); i.setSelectionRange(p, p); }); });
+  $('#mf')?.addEventListener('change', route);
+  $('#qs')?.addEventListener('input', e => {
+    const el = e.target;
+    const cursor = el.selectionStart ?? el.value.length;
+    clearTimeout(window.__qsSearchTimer);
+    window.__qsSearchTimer = setTimeout(() => {
+      route();
+      restoreSearchFocus('qs', cursor);
+    }, 45);
+  });
+  $('#custLookup')?.addEventListener('input', e => {
+    const el = e.target;
+    const value = (el.value || '').trim();
+    const nextHash = value ? `#/customer/${encodeURIComponent(value)}` : '#/customer';
+    const cursor = el.selectionStart ?? el.value.length;
+    if (location.hash !== nextHash) history.replaceState(null, '', nextHash);
+    clearTimeout(window.__custSearchTimer);
+    window.__custSearchTimer = setTimeout(() => {
+      route();
+      restoreSearchFocus('custLookup', cursor);
+    }, 45);
+  });
   document.querySelectorAll('[data-del]').forEach(a => a.onclick = async e => { e.preventDefault(); const [k, i] = a.dataset.del.split(':'); if (!confirm('Delete this record? (It stays in Drive backups.)')) return; const r = S[k].find(x => x.id === i); r.deleted = true; await save(k, r); route(); });
   document.querySelectorAll('[data-start]').forEach(b => b.onclick = async () => { const x = S.bookings.find(y => y.id === b.dataset.start); if (!x) return; x.tripStatus = 'Ongoing'; await save('bookings', x); toast('Trip marked as ongoing'); route(); });
   document.querySelectorAll('[data-complete]').forEach(b => b.onclick = async () => { const x = S.bookings.find(y => y.id === b.dataset.complete); if (!x || !confirm('Mark this trip as completed?')) return; x.tripStatus = 'Completed'; x.completedAt = Date.now(); await save('bookings', x); toast('Trip completed'); location.hash = '#/ongoing'; route(); });
   $('#tf')?.addEventListener('submit', async e => { e.preventDefault(); const f = new FormData(e.target), b = S.bookings.find(x => x.id === id); if (!b || b.tripStatus !== 'Ongoing') return; const type = val(f, 'entryType'), amount = val(f, 'entryAmount', 1); if (!(amount > 0)) return toast('Enter an amount greater than zero', 'error'); b.tripEntries = b.tripEntries || []; b.tripEntries.push({ id: uid(), type, amount, note: val(f, 'entryNote'), createdAt: Date.now() }); const field = type === 'Petrol' ? 'petrol' : type === 'Gas' ? 'gas' : 'driverFee'; b[field] = Core.num(b[field]) + amount; await save('bookings', b); toast('Trip expense added'); route(); });
-  $('#bf')?.addEventListener('submit', async e => { e.preventDefault(); const f = new FormData(e.target), b = S.bookings.find(x => x.id === id) || { id: uid(), rev: 0, baseRev: 0 }; const kf = val(f, 'kmFrom'), kt = val(f, 'kmTo'); if (kf && kt && +kt < +kf) return alert('KM To must be ≥ KM From');
+  $('#bf')?.addEventListener('submit', async e => {
+    e.preventDefault(); const f = new FormData(e.target), b = S.bookings.find(x => x.id === id) || { id: uid(), rev: 0, baseRev: 0 }; const kf = val(f, 'kmFrom'), kt = val(f, 'kmTo'); if (kf && kt && +kt < +kf) return alert('KM To must be ≥ KM From');
     Object.assign(b, { date: val(f, 'date'), destination: val(f, 'destination'), customer: val(f, 'customer'), phone: val(f, 'phone'), tripType: val(f, 'tripType'), tripStatus: val(f, 'tripStatus'), driver: val(f, 'driver'), kmFrom: kf === '' ? '' : +kf, kmTo: kt === '' ? '' : +kt, amount: val(f, 'amount', 1), received: val(f, 'received', 1), driverFee: val(f, 'driverFee', 1), petrol: val(f, 'petrol', 1), gas: val(f, 'gas', 1), toll: val(f, 'toll', 1), notes: val(f, 'notes') });
-    if (b.received > b.amount && !confirm('Received is more than the booking amount. Save anyway?')) return; await save('bookings', b); location.hash = '#/bookings'; });
-  $('#ef')?.addEventListener('submit', async e => { e.preventDefault(); const f = new FormData(e.target), x = S.expenses.find(y => y.id === id) || { id: uid(), rev: 0, baseRev: 0 }, c = val(f, 'category');
-    Object.assign(x, { date: val(f, 'date') || null, category: c, description: val(f, 'description'), amount: val(f, 'amount', 1), method: val(f, 'method'), notes: val(f, 'notes') }); if (!S.settings.categories.includes(c)) { S.settings.categories.push(c); S.settings.updatedAt = Date.now(); S.settings.dirty = true; } await save('expenses', x); location.hash = '#/expenses'; });
+    if (b.received > b.amount && !confirm('Received is more than the booking amount. Save anyway?')) return; await save('bookings', b); location.hash = '#/bookings';
+  });
+  $('#ef')?.addEventListener('submit', async e => {
+    e.preventDefault(); const f = new FormData(e.target), x = S.expenses.find(y => y.id === id) || { id: uid(), rev: 0, baseRev: 0 }, c = val(f, 'category');
+    Object.assign(x, { date: val(f, 'date') || null, category: c, description: val(f, 'description'), amount: val(f, 'amount', 1), method: val(f, 'method'), notes: val(f, 'notes') }); if (!S.settings.categories.includes(c)) { S.settings.categories.push(c); S.settings.updatedAt = Date.now(); S.settings.dirty = true; } await save('expenses', x); location.hash = '#/expenses';
+  });
   $('#dx')?.addEventListener('click', async () => dl(new Blob([await Core.buildXlsx(S, JSZip)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Ertiga-Summary-${new Date().toISOString().slice(0, 10)}.xlsx`));
   $('#sf')?.addEventListener('submit', async e => { e.preventDefault(); const f = new FormData(e.target), c = val(f, 'cat'); Object.assign(S.settings, { emi: val(f, 'emi', 1), emiStart: val(f, 'emiStart'), updatedAt: Date.now(), dirty: true }); if (c && !S.settings.categories.includes(c)) S.settings.categories.push(c); await persist(); paintStatus(); queueSync(); route(); });
   $('#conn')?.addEventListener('click', () => sync(true).then(route));
@@ -223,5 +349,5 @@ function wire(v, id) {
   $('#accountBtn').onclick = () => { location.hash = '#/settings'; };
   addEventListener('hashchange', route);
   appUnlocked = loginValid(); route();
-  if (loginValid()) sync(false);
+  if (loginValid()) { sync(false); queueSync(); }
 })();

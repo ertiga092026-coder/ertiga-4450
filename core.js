@@ -15,9 +15,9 @@
     const dated = Object.keys(M).filter(k => k !== 'Undated').sort();
     const start = S.settings.emiStart || dated[0], end = [dated[dated.length - 1], today].filter(Boolean).sort().pop();
     const emiMonths = new Set();
-    if (start) for (let [y, m] = start.split('-').map(Number), k = start; k <= end; m++, (m > 12 && (m = 1, y++)), k = y + '-' + String(m).padStart(2, '0')) { emiMonths.add(k); g(k); }
+    if (start && emi > 0) for (let [y, m] = start.split('-').map(Number), k = start; k <= end; m++, (m > 12 && (m = 1, y++)), k = y + '-' + String(m).padStart(2, '0')) { emiMonths.add(k); g(k); }
     const keys = Object.keys(M).filter(k => k !== 'Undated').sort().concat(M.Undated ? ['Undated'] : []);
-    const months = keys.map(k => { const m = M[k]; m.pending = m.revenue - m.received; m.expenses = m.trip + m.other; m.profit = m.revenue - m.expenses; m.emi = emiMonths.has(k) ? emi : 0; m.net = m.profit - m.emi; return m; });
+    const months = keys.map(k => { const m = M[k]; m.pending = m.revenue - m.received; m.expenses = m.trip + m.other; m.profit = m.revenue - m.expenses; m.emi = emiMonths.has(k) && emi > 0 ? emi : 0; m.net = m.profit - m.emi; return m; });
     const T = { count: 0, revenue: 0, received: 0, pending: 0, trip: 0, other: 0, expenses: 0, profit: 0, emi: 0, net: 0 };
     months.forEach(m => Object.keys(T).forEach(k => T[k] += m[k]));
     return { months, totals: T, emiMonths: [...emiMonths].sort() };
@@ -58,9 +58,11 @@
     // All Bookings
     const bh = ['Date', 'Month', 'Destination', 'KM From', 'KM To', 'Total KM', 'Trip Type', 'Customer', 'Contact', 'Driver', 'Booking Amount', 'Amount Received', 'Pending', 'Driver Fee', 'Petrol', 'Gas', 'Toll', 'Trip Expenses', 'Profit (before EMI)', 'Payment Status', 'Review Flag', 'Notes'];
     const br = [H(bh)];
-    B.forEach((b, i) => { const r = i + 2, st = num(b.amount) <= 0 ? 'Unpriced' : num(b.received) >= num(b.amount) ? 'Paid' : num(b.received) > 0 ? 'Partial' : 'Unpaid';
+    B.forEach((b, i) => {
+      const r = i + 2, st = num(b.amount) <= 0 ? 'Unpriced' : num(b.received) >= num(b.amount) ? 'Paid' : num(b.received) > 0 ? 'Partial' : 'Unpaid';
       br.push([b.date ? { v: serial(b.date), s: 3 } : '', mk(b.date), b.destination || '', b.kmFrom === '' ? '' : b.kmFrom, b.kmTo === '' ? '' : b.kmTo, { f: `IF(AND(ISNUMBER(D${r}),ISNUMBER(E${r})),E${r}-D${r},"")` }, b.tripType || '', b.customer || '', b.phone || '', b.driver || '',
-        { v: num(b.amount), s: 2 }, { v: num(b.received), s: 2 }, I(`K${r}-L${r}`), { v: num(b.driverFee), s: 2 }, { v: num(b.petrol), s: 2 }, { v: num(b.gas), s: 2 }, { v: num(b.toll), s: 2 }, I(`SUM(N${r}:Q${r})`), I(`K${r}-R${r}`), st, b.date ? '' : 'No date - review', b.notes || '']); });
+      { v: num(b.amount), s: 2 }, { v: num(b.received), s: 2 }, I(`K${r}-L${r}`), { v: num(b.driverFee), s: 2 }, { v: num(b.petrol), s: 2 }, { v: num(b.gas), s: 2 }, { v: num(b.toll), s: 2 }, I(`SUM(N${r}:Q${r})`), I(`K${r}-R${r}`), st, b.date ? '' : 'No date - review', b.notes || '']);
+    });
     br.push([{ v: 'TOTAL', s: 5 }, '', '', '', '', '', '', '', '', '', ...'KLMNOPQRS'.split('').map(c => I(`SUM(${c}2:${c}${nB + 1})`, 4))]);
     sheets.push(['All Bookings', br, { widths: [13, 10, 16, 9, 9, 9, 16, 16, 14, 16, 15, 15, 13, 12, 12, 12, 12, 14, 16, 12, 16, 40], freeze: 1, filter: `A1:V${nB + 1}` }]);
     // All Expenses
@@ -77,8 +79,10 @@
     // Monthly Expenses
     const cats = [...new Set([...(S.settings.categories || []), ...E.map(e => e.category || 'Uncategorised')])].sort();
     const xr = [H(['Month', 'Driver Fee', 'Petrol', 'Gas', 'Toll (trip)', 'Trip Expenses', ...cats, 'Other Expenses', 'Total Expenses'])], cl = i => col(i);
-    ms.forEach((m, i) => { const r = i + 2, k = `A${r}`, c0 = 6, tc = col(6 + cats.length), oc = col(6 + cats.length + 1);
-      xr.push([m.month, ...['N', 'O', 'P', 'Q'].map(c => I(sp('B', rb, k, rb(c)))), I(`SUM(B${r}:E${r})`), ...cats.map(c => I(`SUMPRODUCT(--(${re('B')}=${k}),--(${re('C')}="${c.replace(/"/g, '""')}"),${re('E')})`)), I(`SUM(${col(6)}${r}:${col(5 + cats.length)}${r})`), I(`F${r}+${tc}${r}`)]); });
+    ms.forEach((m, i) => {
+      const r = i + 2, k = `A${r}`, c0 = 6, tc = col(6 + cats.length), oc = col(6 + cats.length + 1);
+      xr.push([m.month, ...['N', 'O', 'P', 'Q'].map(c => I(sp('B', rb, k, rb(c)))), I(`SUM(B${r}:E${r})`), ...cats.map(c => I(`SUMPRODUCT(--(${re('B')}=${k}),--(${re('C')}="${c.replace(/"/g, '""')}"),${re('E')})`)), I(`SUM(${col(6)}${r}:${col(5 + cats.length)}${r})`), I(`F${r}+${tc}${r}`)]);
+    });
     const nc = 7 + cats.length;
     xr.push([{ v: 'TOTAL', s: 5 }, ...Array.from({ length: nc }, (_, j) => I(`SUM(${col(j + 1)}2:${col(j + 1)}${n + 1})`, 4))]);
     sheets.push(['Monthly Expenses', xr, { widths: [12, ...Array(nc).fill(15)], freeze: 1 }]);
@@ -95,13 +99,13 @@
     // Dashboard (first)
     const T = `'Monthly Profit'!`, last = n + 2;
     const d = [[{ v: 'Ertiga Manager - Overall Totals', s: 6 }], [{ v: 'Generated ' + (today || new Date().toISOString().slice(0, 10)), s: 0 }], [],
-      [{ v: 'Total bookings', s: 5 }, { f: `COUNTA(${rb('B')})` }],
-      [{ v: 'Overall booking revenue', s: 5 }, I(`SUM(${rb('K')})`)], [{ v: 'Total received', s: 5 }, I(`SUM(${rb('L')})`)], [{ v: 'Total pending', s: 5 }, I('B5-B6')],
-      [{ v: 'Total trip expenses', s: 5 }, I(`SUM(${rb('R')})`)], [{ v: 'Total other expenses', s: 5 }, I(`SUM(${re('E')})`)], [{ v: 'Total expenses', s: 5 }, I('B8+B9')],
-      [{ v: 'Overall profit before EMI', s: 5 }, I('B5-B10')], [{ v: 'Total EMI paid', s: 5 }, I(`'EMI Summary'!B${n + 7}`)], [{ v: 'Overall net profit after EMI', s: 5 }, I('B11-B12', 4)],
-      [{ v: 'Reconciliation (should be 0)', s: 5 }, I(`ROUND(B13-${T}I${last},2)+ROUND(B10-${T}F${last},2)`)],
-      [{ v: 'Undated records to review', s: 5 }, { f: `COUNTIF(${re('B')},"Undated")+COUNTIF(${rb('B')},"Undated")` }], [],
-      H(['Month', 'Booking Revenue', 'Total Expenses', 'Profit before EMI', 'EMI', 'Net after EMI'])];
+    [{ v: 'Total bookings', s: 5 }, { f: `COUNTA(${rb('B')})` }],
+    [{ v: 'Overall booking revenue', s: 5 }, I(`SUM(${rb('K')})`)], [{ v: 'Total received', s: 5 }, I(`SUM(${rb('L')})`)], [{ v: 'Total pending', s: 5 }, I('B5-B6')],
+    [{ v: 'Total trip expenses', s: 5 }, I(`SUM(${rb('R')})`)], [{ v: 'Total other expenses', s: 5 }, I(`SUM(${re('E')})`)], [{ v: 'Total expenses', s: 5 }, I('B8+B9')],
+    [{ v: 'Overall profit before EMI', s: 5 }, I('B5-B10')], [{ v: 'Total EMI paid', s: 5 }, I(`'EMI Summary'!B${n + 7}`)], [{ v: 'Overall net profit after EMI', s: 5 }, I('B11-B12', 4)],
+    [{ v: 'Reconciliation (should be 0)', s: 5 }, I(`ROUND(B13-${T}I${last},2)+ROUND(B10-${T}F${last},2)`)],
+    [{ v: 'Undated records to review', s: 5 }, { f: `COUNTIF(${re('B')},"Undated")+COUNTIF(${rb('B')},"Undated")` }], [],
+    H(['Month', 'Booking Revenue', 'Total Expenses', 'Profit before EMI', 'EMI', 'Net after EMI'])];
     ms.forEach((m, i) => { const r = i + 2; d.push([{ f: `${T}A${r}` }, I(`${T}C${r}`), I(`${T}F${r}`), I(`${T}G${r}`), I(`${T}H${r}`), I(`${T}I${r}`)]); });
     sheets.unshift(['Dashboard', d, { widths: [34, 18, 18, 18, 14, 18], freeze: 0 }]);
 

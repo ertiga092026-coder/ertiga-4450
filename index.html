@@ -1,10 +1,1118 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101d35"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><title>Ertiga Manager — Fleet workspace</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
-:root{--navy:#101d35;--navy2:#182b4b;--blue:#4169e1;--blue2:#eef2ff;--bg:#f4f6fb;--card:#fff;--ink:#182338;--muted:#78849a;--line:#e8edf4;--green:#16845b;--red:#d34d5b;--amber:#bd7a1b;--shadow:0 10px 30px rgba(25,42,75,.06)}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px 'DM Sans',sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}.login-screen{min-height:100vh;display:grid;grid-template-columns:1.1fr .9fr;background:#0e1b32;color:white}.login-visual{padding:7vw;display:flex;flex-direction:column;justify-content:space-between;background:radial-gradient(ellipse at 15% 15%,#304e86 0,transparent 42%),linear-gradient(145deg,#142746,#0b1426);position:relative;overflow:hidden}.login-visual:after{content:'ERTIGA';position:absolute;font:800 clamp(100px,19vw,280px) Manrope,sans-serif;letter-spacing:-.09em;color:#ffffff08;bottom:8%;left:4%}.brand{font:800 19px Manrope;letter-spacing:-.04em}.brand-mark{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#4169e1;margin-right:10px}.hero-copy{position:relative;z-index:1;max-width:620px}.eyebrow{color:#9eb7f8;text-transform:uppercase;letter-spacing:.18em;font-size:11px;font-weight:700}.hero-copy h1{font:800 clamp(38px,5vw,68px)/1.04 Manrope;margin:18px 0}.hero-copy p{color:#b8c4d9;font-size:17px;line-height:1.8;max-width:470px}.login-foot{color:#8292ad;font-size:12px;position:relative;z-index:1}.login-panel{display:grid;place-items:center;padding:32px;background:#f7f9fd;color:var(--ink)}.login-box{width:min(100%,390px)}.login-box .brand{color:var(--navy);margin-bottom:55px}.login-box h2{font:800 32px Manrope;margin:0 0 10px;letter-spacing:-.04em}.login-box p{color:var(--muted);line-height:1.7;margin-bottom:30px}.google-btn{width:100%;height:54px;border:1px solid #dce3ef;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:13px;color:#24324a;font-weight:700;box-shadow:0 5px 18px #1d31500b}.google-btn:hover{border-color:#9db2ed;box-shadow:0 8px 24px #1d315018}.google-g{font:bold 22px Arial;background:conic-gradient(from -45deg,#4285f4 0 25%,#34a853 0 50%,#fbbc05 0 75%,#ea4335 0);color:transparent;background-clip:text}.login-note{font-size:11px;color:#9aa5b6;text-align:center;margin-top:24px}.login-error{color:var(--red);font-size:12px;margin-top:14px;min-height:18px}
-#workspace{display:none;min-height:100vh}.sidebar{width:248px;background:var(--navy);color:#d4deef;position:fixed;inset:0 auto 0 0;padding:24px 16px;display:flex;flex-direction:column;z-index:10}.side-brand{font:800 18px Manrope;color:#fff;padding:4px 12px 30px}.side-brand span{color:#7ea0ff}.nav-label{font-size:10px;letter-spacing:.16em;color:#71809b;padding:14px 12px 8px;text-transform:uppercase}.sidebar nav{display:grid;gap:5px}.sidebar nav a{color:#aebbd0;text-decoration:none;padding:11px 13px;border-radius:9px;font-weight:600;transition:.2s}.sidebar nav a:hover,.sidebar nav a.on{background:#263b60;color:white}.sidebar nav a.on{box-shadow:inset 3px 0 #7294ff}.side-bottom{margin-top:auto;border-top:1px solid #293a58;padding:16px 10px;color:#8090aa;font-size:11px}.main-area{margin-left:248px;min-height:100vh}.topbar{height:76px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 34px;position:sticky;top:0;z-index:5}.top-title{font:700 18px Manrope}.top-actions{display:flex;align-items:center;gap:12px}.pill{padding:6px 11px;border-radius:20px;background:#eff3f9;color:#5e6b80;font-size:11px;font-weight:700}.Synced{color:var(--green)}.Pending{color:var(--amber)}.Offline,.Error,.Conflict{color:var(--red)}.account-btn{border:1px solid var(--line);background:white;border-radius:10px;padding:8px 12px;color:#26344b;font-weight:600}.content{max-width:1500px;padding:30px 34px;margin:auto}.content h1{font:800 26px Manrope;letter-spacing:-.04em;margin:0 0 6px}.content .subhead{color:var(--muted);margin:0 0 25px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:15px}.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:20px;margin-bottom:15px;box-shadow:var(--shadow)}.card small{color:var(--muted);display:block;font-size:11px;font-weight:600;letter-spacing:.04em}.card b{font:700 21px Manrope}.card .metric{display:block;margin-top:9px;font:800 25px Manrope;letter-spacing:-.04em}.neg{color:var(--red)}.pos{color:var(--green)}form.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}label{font-size:12px;color:#65738a;display:block;margin-bottom:6px;font-weight:600}input,select,textarea{padding:11px 12px;border:1px solid #dfe5ef;border-radius:9px;width:100%;background:white;color:var(--ink);outline:none}input:focus,select:focus,textarea:focus{border-color:#7895ee;box-shadow:0 0 0 3px #4169e118}button{border:0;border-radius:9px;padding:10px 15px;background:var(--blue);color:#fff;font-weight:700}button:hover{filter:brightness(.96)}button.sec{background:#f0f3f8;color:#34435b;border:1px solid #e3e8f0}button.del{background:var(--red)}button.small{font-size:11px;padding:7px 10px}button.done{background:var(--green)}a{color:var(--blue)}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}.row>*{flex:0 1 auto}.sc{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{background:#f7f9fc;color:#6a7890;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.bar{height:12px;background:var(--blue);border-radius:10px;min-width:2px}.bar.n{background:var(--red)}.flag{color:var(--amber);font-size:12px}.toast{position:fixed;right:22px;top:22px;z-index:30;padding:13px 18px;border-radius:11px;background:var(--green);color:white;box-shadow:0 8px 25px #0002;opacity:0;transform:translateY(-8px);pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:none}.toast.error{background:var(--red)}pre{white-space:pre-wrap;overflow-wrap:anywhere}.mobile-menu{display:none}@media(max-width:850px){.sidebar{width:72px;padding:18px 8px}.side-brand{font-size:0;padding:8px 9px 25px}.side-brand:after{content:'E';font-size:20px}.nav-label,.sidebar nav a{font-size:0;text-align:center;padding:13px 5px}.sidebar nav a:first-letter{font-size:14px}.side-bottom{font-size:0}.main-area{margin-left:72px}.content{padding:22px 16px}.topbar{padding:0 16px}}@media(max-width:620px){.login-screen{grid-template-columns:1fr}.login-visual{display:none}.login-panel{min-height:100vh}.login-box .brand{margin-bottom:50px}.topbar{height:65px}.content{padding:18px 12px}.content h1{font-size:22px}}@media print{.sidebar,.topbar,.noprint{display:none!important}.main-area{margin:0}.content{padding:0}}
-</style></head><body>
-<section id="loginScreen" class="login-screen"><div class="login-visual"><div class="brand"><span class="brand-mark">✦</span>ERTIGA <span>MANAGER</span></div><div class="hero-copy"><div class="eyebrow">Your fleet. In perfect order.</div><h1>Every trip.<br>Every detail.<br>Under control.</h1><p>A clearer view of your bookings, trip costs and business performance — all in one beautifully organised workspace.</p></div><div class="login-foot">PRIVATE WORKSPACE · SECURE GOOGLE SIGN-IN</div></div><div class="login-panel"><div class="login-box"><div class="brand"><span class="brand-mark">✦</span>ERTIGA <span>MANAGER</span></div><h2>Welcome back</h2><p>Sign in with your authorised Google account to access your fleet workspace.</p><button id="loginBtn" class="google-btn"><span class="google-g">G</span>Continue with Google</button><div id="loginError" class="login-error" role="alert"></div><div class="login-note">Your workspace is private to your Google account.</div></div></div></section>
-<div id="workspace"><aside class="sidebar"><div class="side-brand">ERTIGA <span>MANAGER</span></div><div class="nav-label">Workspace</div><nav id="nav"></nav><div class="nav-label">Manage</div><nav><a href="#/settings">⚙ &nbsp; Settings &amp; Backup</a></nav><div class="side-bottom">FLEET MANAGEMENT WORKSPACE<br>Version 2.0</div></aside><section class="main-area"><header class="topbar"><div class="top-title" id="pageTitle">Dashboard</div><div class="top-actions"><span id="who" style="font-size:12px;color:#66758c"></span><span id="st" class="pill">…</span><button class="sec" id="syncBtn">Sync now</button><button class="account-btn" id="accountBtn">Account ▾</button></div></header><div id="toast" class="toast" role="status" aria-live="polite"></div><main id="app" class="content">Loading workspace…</main></section></div>
-<script src="lib/jszip.min.js"></script><script src="core.js"></script><script src="app.js"></script></body></html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#101d35">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Ertiga Manager — Fleet workspace</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+        :root {
+            --navy: #0f1d36;
+            --navy-2: #16294d;
+            --blue: #2d63f3;
+            --blue-soft: #ebf0ff;
+            --bg: #f4f7fb;
+            --card: #fff;
+            --ink: #172338;
+            --muted: #697b92;
+            --line: #e6ebf3;
+            --green: #0e8a5c;
+            --red: #d34a5d;
+            --amber: #c9821d;
+            --shadow: 0 18px 42px rgba(16, 27, 47, .08)
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html {
+            scroll-behavior: smooth
+        }
+
+        body {
+            margin: 0;
+            background: linear-gradient(180deg, #f6f8fc 0%, #ecf2fb 100%);
+            color: var(--ink);
+            font: 14px 'DM Sans', sans-serif
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit
+        }
+
+        button {
+            cursor: pointer
+        }
+
+        a {
+            text-decoration: none
+        }
+
+        .login-screen {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1.1fr .9fr;
+            background: #0d1a2f;
+            color: #fff
+        }
+
+        .login-visual {
+            padding: 7vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: radial-gradient(circle at 15% 15%, rgba(71, 112, 220, .6), transparent 38%), linear-gradient(145deg, #132449, #091627);
+            position: relative;
+            overflow: hidden
+        }
+
+        .login-visual:after {
+            content: 'ERTIGA';
+            position: absolute;
+            font: 800 clamp(100px, 19vw, 260px) Manrope, sans-serif;
+            letter-spacing: -.085em;
+            color: rgba(255, 255, 255, .04);
+            bottom: 6%;
+            left: 3%
+        }
+
+        .brand {
+            font: 800 18px Manrope;
+            letter-spacing: -.04em;
+            display: flex;
+            align-items: center
+        }
+
+        .brand-mark {
+            display: inline-grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: var(--blue);
+            margin-right: 10px;
+            box-shadow: 0 12px 28px rgba(45, 99, 243, .35)
+        }
+
+        .hero-copy {
+            position: relative;
+            z-index: 1;
+            max-width: 620px
+        }
+
+        .eyebrow {
+            color: #9bb7ff;
+            text-transform: uppercase;
+            letter-spacing: .18em;
+            font-size: 11px;
+            font-weight: 800
+        }
+
+        .hero-copy h1 {
+            font: 800 clamp(38px, 5vw, 68px)/1.04 Manrope;
+            margin: 18px 0
+        }
+
+        .hero-copy p {
+            color: #c1d0ed;
+            font-size: 17px;
+            line-height: 1.8;
+            max-width: 470px
+        }
+
+        .login-foot {
+            color: #90a1c7;
+            font-size: 12px;
+            position: relative;
+            z-index: 1
+        }
+
+        .login-panel {
+            display: grid;
+            place-items: center;
+            padding: 32px;
+            background: #f7f9fd;
+            color: var(--ink)
+        }
+
+        .login-box {
+            width: min(100%, 390px)
+        }
+
+        .login-box .brand {
+            color: var(--navy);
+            margin-bottom: 52px
+        }
+
+        .login-box h2 {
+            font: 800 32px Manrope;
+            margin: 0 0 10px;
+            letter-spacing: -.04em
+        }
+
+        .login-box p {
+            color: var(--muted);
+            line-height: 1.7;
+            margin-bottom: 28px
+        }
+
+        .google-btn {
+            width: 100%;
+            height: 54px;
+            border: 1px solid #dfe6f2;
+            background: #fff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 13px;
+            color: #24324a;
+            font-weight: 700;
+            box-shadow: 0 10px 26px rgba(29, 45, 81, .06);
+            transition: .2s
+        }
+
+        .google-btn:hover {
+            border-color: #9ab3ff;
+            box-shadow: 0 12px 28px rgba(29, 45, 81, .1)
+        }
+
+        .google-g {
+            font: bold 22px Arial;
+            background: conic-gradient(from -45deg, #4285f4 0 25%, #34a853 0 50%, #fbbc05 0 75%, #ea4335 0);
+            color: transparent;
+            background-clip: text
+        }
+
+        .login-note {
+            font-size: 11px;
+            color: #9aa7b8;
+            text-align: center;
+            margin-top: 24px
+        }
+
+        .login-error {
+            color: var(--red);
+            font-size: 12px;
+            margin-top: 14px;
+            min-height: 18px
+        }
+
+        #workspace {
+            display: none;
+            min-height: 100vh
+        }
+
+        .sidebar {
+            width: 248px;
+            background: linear-gradient(180deg, var(--navy) 0%, #14253f 100%);
+            color: #dfe9ff;
+            position: fixed;
+            inset: 0 auto 0 0;
+            padding: 22px 14px 16px;
+            display: flex;
+            flex-direction: column;
+            z-index: 20
+        }
+
+        .side-brand {
+            font: 800 18px Manrope;
+            color: #fff;
+            padding: 4px 12px 28px
+        }
+
+        .side-brand span {
+            color: #8bb1ff
+        }
+
+        .nav-label {
+            font-size: 10px;
+            letter-spacing: .16em;
+            color: #7d8dad;
+            padding: 14px 12px 8px;
+            text-transform: uppercase
+        }
+
+        .sidebar nav {
+            display: grid;
+            gap: 6px
+        }
+
+        .sidebar nav a,
+        .settings-nav a {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            color: #d8e1f5;
+            text-decoration: none;
+            padding: 11px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            transition: .2s
+        }
+
+        .sidebar nav a:hover,
+        .sidebar nav a.on,
+        .settings-nav a:hover {
+            background: rgba(255, 255, 255, .06);
+            color: #fff
+        }
+
+        .sidebar nav a.on {
+            box-shadow: inset 3px 0 var(--blue);
+            background: rgba(52, 95, 214, .18);
+            color: #fff
+        }
+
+        .nav-icon {
+            width: 22px;
+            text-align: center;
+            display: inline-block;
+            font-size: 15px
+        }
+
+        .nav-text {
+            display: inline-block
+        }
+
+        .side-bottom {
+            margin-top: auto;
+            border-top: 1px solid rgba(255, 255, 255, .1);
+            padding: 16px 10px;
+            color: #8f99ba;
+            font-size: 11px;
+            line-height: 1.5
+        }
+
+        .main-area {
+            margin-left: 248px;
+            min-height: 100vh
+        }
+
+        .topbar {
+            height: 76px;
+            background: rgba(255, 255, 255, .9);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 34px;
+            position: sticky;
+            top: 0;
+            z-index: 10
+        }
+
+        .top-title {
+            font: 700 20px Manrope;
+            letter-spacing: -.03em
+        }
+
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .pill {
+            padding: 6px 11px;
+            border-radius: 20px;
+            background: #edf3fe;
+            color: #4f648a;
+            font-size: 11px;
+            font-weight: 800
+        }
+
+        .Synced {
+            color: var(--green)
+        }
+
+        .Pending {
+            color: var(--amber)
+        }
+
+        .Offline,
+        .Error,
+        .Conflict {
+            color: var(--red)
+        }
+
+        .account-btn {
+            border: 1px solid var(--line);
+            background: #fff;
+            border-radius: 10px;
+            padding: 9px 12px;
+            color: #26344b;
+            font-weight: 700
+        }
+
+        .content {
+            max-width: 1500px;
+            padding: 30px 34px;
+            margin: auto
+        }
+
+        .content h1 {
+            font: 800 26px Manrope;
+            letter-spacing: -.04em;
+            margin: 0 0 6px
+        }
+
+        .content .subhead {
+            color: var(--muted);
+            margin: 0 0 25px
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+            gap: 15px
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow)
+        }
+
+        .card small {
+            color: var(--muted);
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .04em
+        }
+
+        .card b {
+            font: 700 21px Manrope
+        }
+
+        .card .metric {
+            display: block;
+            margin-top: 9px;
+            font: 800 25px Manrope;
+            letter-spacing: -.04em
+        }
+
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 12px
+        }
+
+        .section-head h3 {
+            margin: 0;
+            font: 800 20px Manrope;
+            letter-spacing: -.03em
+        }
+
+        .muted,
+        .soft-tag {
+            color: var(--muted)
+        }
+
+        .soft-tag {
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 20px;
+            background: #f1f5fc;
+            border: 1px solid var(--line)
+        }
+
+        .stat-grid,
+        .dashboard-grid,
+        .detail-grid {
+            display: grid;
+            gap: 15px
+        }
+
+        .stat-grid {
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            margin-top: 18px
+        }
+
+        .stat-card {
+            background: linear-gradient(180deg, #fff 0%, #f9fbff 100%);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 16px 18px
+        }
+
+        .stat-card small {
+            font-size: 11px;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 4px
+        }
+
+        .stat-card b {
+            display: block;
+            font: 800 26px Manrope;
+            letter-spacing: -.04em
+        }
+
+        .stack-card {
+            display: flex;
+            flex-direction: column;
+            gap: 12px
+        }
+
+        .mini-trip-card {
+            padding: 14px 14px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: linear-gradient(180deg, #fbfcff 0%, #f8fbff 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .mini-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px
+        }
+
+        .mini-top strong {
+            font-size: 14px
+        }
+
+        .mini-meta {
+            color: var(--muted);
+            font-size: 12px
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .05em;
+            text-transform: uppercase
+        }
+
+        .status-badge.ongoing {
+            background: rgba(14, 138, 92, .12);
+            color: var(--green)
+        }
+
+        .status-badge.upcoming {
+            background: rgba(201, 130, 29, .12);
+            color: var(--amber)
+        }
+
+        .mini-actions,
+        .toolbar-actions,
+        .row,
+        .action-stack {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .mini-actions {
+            margin-top: 4px
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 0 0 14px;
+            padding: 2px 0
+        }
+
+        .toolbar input {
+            max-width: 260px
+        }
+
+        .top-grid {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            margin-top: 10px
+        }
+
+        .customer-detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+            border: 1px solid var(--line);
+            background: #f7f9fe;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin: 12px 0
+        }
+
+        .customer-detail-header h4 {
+            margin: 0 0 4px;
+            font-size: 20px;
+            font-family: 'Manrope';
+            letter-spacing: -.03em
+        }
+
+        .customer-detail-header p {
+            margin: 0;
+            color: var(--muted)
+        }
+
+        .detail-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            margin-top: 16px
+        }
+
+        .detail-box {
+            border: 1px solid var(--line);
+            background: #fafcff;
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .detail-box small {
+            font-size: 11px;
+            color: var(--muted)
+        }
+
+        .detail-box strong {
+            font-size: 15px;
+            line-height: 1.4
+        }
+
+        .detail-box.full {
+            grid-column: 1 / -1
+        }
+
+        .trend-row {
+            display: grid;
+            grid-template-columns: 70px 1fr auto;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0
+        }
+
+        .month-label {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .trend-bar {
+            height: 10px;
+            border-radius: 999px;
+            display: block;
+            min-width: 8px
+        }
+
+        .trend-bar.pos {
+            background: linear-gradient(90deg, #4fc38d, #0e8a5c)
+        }
+
+        .trend-bar.neg {
+            background: linear-gradient(90deg, #ffb29c, #d34a5d)
+        }
+
+        .empty-state {
+            padding: 18px 12px;
+            color: var(--muted);
+            border: 1px dashed var(--line);
+            border-radius: 12px;
+            background: #f9fbff;
+            text-align: center
+        }
+
+        .neg {
+            color: var(--red)
+        }
+
+        .pos {
+            color: var(--green)
+        }
+
+        form.f {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px
+        }
+
+        label {
+            font-size: 12px;
+            color: #65738a;
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600
+        }
+
+        input,
+        select,
+        textarea {
+            padding: 11px 12px;
+            border: 1px solid #dfe5ef;
+            border-radius: 10px;
+            width: 100%;
+            background: #fff;
+            color: var(--ink);
+            outline: none;
+            transition: border-color .2s, box-shadow .2s
+        }
+
+        .input-big,
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #8ea9ff;
+            box-shadow: 0 0 0 3px rgba(70, 108, 225, .12)
+        }
+
+        button {
+            border: 0;
+            border-radius: 10px;
+            padding: 10px 15px;
+            background: var(--blue);
+            color: #fff;
+            font-weight: 800;
+            transition: .2s
+        }
+
+        .button-secondary,
+        button.sec {
+            background: #f0f4fb;
+            color: #2d3e5f;
+            border: 1px solid #dfe8f4
+        }
+
+        .button-danger,
+        button.del {
+            background: var(--red)
+        }
+
+        button.small {
+            font-size: 11px;
+            padding: 7px 10px;
+            border-radius: 8px
+        }
+
+        button.done {
+            background: var(--green)
+        }
+
+        button.dark {
+            background: #1b2741
+        }
+
+        button.success {
+            background: var(--green)
+        }
+
+        button.secondary {
+            background: #eef3ff;
+            color: #3857b5;
+            border: 1px solid #dfe9ff
+        }
+
+        a {
+            color: var(--blue)
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin: 10px 0
+        }
+
+        .row>* {
+            flex: 0 1 auto
+        }
+
+        .sc {
+            overflow-x: auto
+        }
+
+        .cell-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 3px
+        }
+
+        .cell-stack small {
+            color: var(--muted)
+        }
+
+        .action-stack {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .flag {
+            color: var(--amber);
+            font-size: 12px
+        }
+
+        .toast {
+            position: fixed;
+            right: 22px;
+            top: 22px;
+            z-index: 30;
+            padding: 13px 18px;
+            border-radius: 12px;
+            background: var(--green);
+            color: #fff;
+            box-shadow: 0 14px 34px rgba(5, 20, 33, .2);
+            opacity: 0;
+            transform: translateY(-8px);
+            pointer-events: none;
+            transition: .2s
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: none
+        }
+
+        .toast.error {
+            background: var(--red)
+        }
+
+        pre {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            min-width: 760px
+        }
+
+        th,
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+            white-space: nowrap
+        }
+
+        th {
+            background: #f7f9fd;
+            color: #6a7890;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .08em
+        }
+
+        td strong {
+            color: var(--ink)
+        }
+
+        .bar {
+            height: 12px;
+            background: var(--blue);
+            border-radius: 10px;
+            min-width: 2px
+        }
+
+        .bar.n {
+            background: var(--red)
+        }
+
+        .mobile-menu {
+            display: none
+        }
+
+        @media (max-width:900px) {
+            .sidebar {
+                width: 110px;
+                padding: 16px 10px
+            }
+
+            .side-brand {
+                font-size: 0;
+                padding: 8px 8px 20px
+            }
+
+            .side-brand:after {
+                content: 'E';
+                font-size: 20px;
+                display: inline-block
+            }
+
+            .nav-label {
+                padding-left: 8px;
+                padding-right: 8px;
+                letter-spacing: .08em
+            }
+
+            .sidebar nav a,
+            .settings-nav a {
+                padding: 10px 8px;
+                justify-content: center;
+                flex-direction: column;
+                gap: 6px
+            }
+
+            .nav-text {
+                font-size: 10px;
+                line-height: 1.1;
+                text-align: center
+            }
+
+            .main-area {
+                margin-left: 110px
+            }
+
+            .topbar {
+                padding: 0 18px
+            }
+
+            .content {
+                padding: 22px 16px
+            }
+        }
+
+        @media (max-width:620px) {
+            :root {
+                --card-padding: 16px;
+            }
+
+            body {
+                font-size: 13px;
+            }
+
+            .login-screen {
+                grid-template-columns: 1fr
+            }
+
+            .login-visual {
+                display: none
+            }
+
+            .login-panel {
+                min-height: 100vh;
+                padding: 22px 18px;
+            }
+
+            .login-box .brand {
+                margin-bottom: 46px
+            }
+
+            .sidebar {
+                width: 88px;
+                padding: 12px 8px 10px;
+                box-shadow: 0 -10px 30px rgba(11, 20, 35, .18);
+            }
+
+            .main-area {
+                margin-left: 88px;
+                padding-bottom: 18px;
+            }
+
+            .side-brand {
+                font-size: 0;
+                padding: 8px 8px 18px;
+            }
+
+            .side-brand:after {
+                content: 'E';
+                font-size: 20px;
+                color: #fff;
+                display: inline-block;
+            }
+
+            .nav-label {
+                display: none;
+            }
+
+            .sidebar nav a,
+            .settings-nav a {
+                min-height: 54px;
+                padding: 8px 6px;
+                border-radius: 12px;
+                gap: 4px;
+            }
+
+            .nav-icon {
+                width: 100%;
+                font-size: 18px;
+            }
+
+            .nav-text {
+                font-size: 9px;
+                line-height: 1.1;
+                text-align: center;
+                letter-spacing: .01em;
+            }
+
+            .side-bottom {
+                display: none;
+            }
+
+            .topbar {
+                height: 68px;
+                padding: 0 12px;
+            }
+
+            .top-title {
+                font-size: 17px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 140px;
+            }
+
+            .top-actions {
+                gap: 6px;
+            }
+
+            .top-actions>span {
+                display: none;
+            }
+
+            .top-actions button {
+                padding: 10px 10px;
+                min-width: 0;
+                font-size: 11px;
+            }
+
+            .content {
+                padding: 16px 12px;
+            }
+
+            .toolbar {
+                align-items: stretch;
+            }
+
+            .toolbar input {
+                max-width: 100%;
+                width: 100%;
+                min-height: 42px;
+            }
+
+            .toolbar-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .stat-card,
+            .mini-trip-card,
+            .card {
+                padding: var(--card-padding);
+            }
+
+            .section-head {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .customer-detail-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .mini-actions,
+            .action-stack {
+                width: 100%;
+            }
+
+            .mini-actions button,
+            .action-stack button,
+            .action-stack a {
+                flex: 1 1 auto;
+                justify-content: center;
+                min-height: 38px;
+            }
+
+            form.f {
+                grid-template-columns: 1fr;
+            }
+
+            input,
+            select,
+            textarea,
+            button {
+                min-height: 42px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <section id="loginScreen" class="login-screen">
+        <div class="login-visual">
+            <div class="brand"><span class="brand-mark">✦</span>ERTIGA <span>MANAGER</span></div>
+            <div class="hero-copy">
+                <div class="eyebrow">Your fleet. In perfect order.</div>
+                <h1>Every trip.<br>Every detail.<br>Under control.</h1>
+                <p>A clearer view of your bookings, trip costs and business performance — all in one beautifully
+                    organised workspace.</p>
+            </div>
+            <div class="login-foot">PRIVATE WORKSPACE · SECURE GOOGLE SIGN-IN</div>
+        </div>
+        <div class="login-panel">
+            <div class="login-box">
+                <div class="brand"><span class="brand-mark">✦</span>ERTIGA <span>MANAGER</span></div>
+                <h2>Welcome back</h2>
+                <p>Sign in with your authorised Google account to access your fleet workspace.</p><button id="loginBtn"
+                    class="google-btn"><span class="google-g">G</span>Continue with Google</button>
+                <div id="loginError" class="login-error" role="alert"></div>
+                <div class="login-note">Your workspace is private to your Google account.</div>
+            </div>
+        </div>
+    </section>
+    <div id="workspace">
+        <aside class="sidebar">
+            <div class="side-brand">ERTIGA <span>MANAGER</span></div>
+            <div class="nav-label">Workspace</div>
+            <nav id="nav"></nav>
+            <div class="nav-label">Manage</div>
+            <nav class="settings-nav"><a href="#/settings"><span class="nav-icon">⚙</span><span
+                        class="nav-text">Settings</span></a></nav>
+            <div class="side-bottom">FLEET MANAGEMENT WORKSPACE<br>Version 2.0</div>
+        </aside>
+        <section class="main-area">
+            <header class="topbar">
+                <div class="top-title" id="pageTitle">Dashboard</div>
+                <div class="top-actions"><span id="who" style="font-size:12px;color:#66758c"></span><span id="st"
+                        class="pill">…</span><button class="sec" id="syncBtn">Sync now</button><button
+                        class="account-btn" id="accountBtn">Account ▾</button></div>
+            </header>
+            <div id="toast" class="toast" role="status" aria-live="polite"></div>
+            <main id="app" class="content">Loading workspace…</main>
+        </section>
+    </div>
+    <script src="lib/jszip.min.js"></script>
+    <script src="core.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
